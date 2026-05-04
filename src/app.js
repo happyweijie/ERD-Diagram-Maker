@@ -476,9 +476,26 @@ function attributeEdgeEndpoints(edge, from, to) {
   const dx = marker.x - parentCenter.x;
   const dy = marker.y - parentCenter.y;
   const useHorizontal = Math.abs(dx) >= Math.abs(dy);
+  const isDiamond = parent.type === "relationship";
+  const cx = parent.x + parent.width / 2;
+  const cy = parent.y + parent.height / 2;
+  const hw = parent.width / 2;
+  const hh = parent.height / 2;
   let parentPoint;
   let attrPoint;
-  if (useHorizontal) {
+  if (isDiamond) {
+    if (useHorizontal) {
+      const y = clamp(marker.y, parent.y, parent.y + parent.height);
+      const sideX = cx + (dx >= 0 ? 1 : -1) * hw * Math.max(0, 1 - Math.abs(y - cy) / hh);
+      parentPoint = { x: sideX, y };
+      attrPoint = { x: marker.x + (dx >= 0 ? -ATTR_RADIUS : ATTR_RADIUS), y };
+    } else {
+      const x = clamp(marker.x, parent.x, parent.x + parent.width);
+      const sideY = cy + (dy >= 0 ? 1 : -1) * hh * Math.max(0, 1 - Math.abs(x - cx) / hw);
+      parentPoint = { x, y: sideY };
+      attrPoint = { x, y: marker.y + (dy >= 0 ? -ATTR_RADIUS : ATTR_RADIUS) };
+    }
+  } else if (useHorizontal) {
     const sideX = dx >= 0 ? parent.x + parent.width : parent.x;
     const y = clamp(marker.y, parent.y, parent.y + parent.height);
     parentPoint = { x: sideX, y };
