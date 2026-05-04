@@ -135,6 +135,23 @@ function attributeParent(node) {
   return other?.type === "attribute" ? null : other;
 }
 
+function compositeChildPos(node) {
+  const marker = attributeMarker(node);
+  const parent = attributeParent(node);
+  const parentCenter = parent ? center(parent) : null;
+  const dx = parentCenter ? marker.x - parentCenter.x : 0;
+  const dy = parentCenter ? marker.y - parentCenter.y : 1;
+  const horizontal = parentCenter ? Math.abs(dx) >= Math.abs(dy) : false;
+  let childX = marker.x;
+  let childY = marker.y;
+  if (horizontal) {
+    childX = marker.x + (dx >= 0 ? 28 : -28);
+  } else {
+    childY = marker.y + (dy >= 0 ? 28 : -28);
+  }
+  return { childX, childY, horizontal, dx, dy };
+}
+
 function nodeById(id) {
   return state.nodes.find((n) => n.id === id);
 }
@@ -347,29 +364,12 @@ function shapeForNode(node) {
     const g = svg("g");
     const marker = attributeMarker(node);
     if (node.props?.composite) {
-      const parent = attributeParent(node);
-      const parentCenter = parent ? center(parent) : null;
-      let childX = marker.x;
-      let childY = marker.y;
-      
-      if (parentCenter) {
-        const sidePlacement = Math.abs(marker.x - parentCenter.x) > Math.abs(marker.y - parentCenter.y) * 1.2;
-        if (sidePlacement) {
-          const isRight = marker.x >= parentCenter.x;
-          childX = marker.x + (isRight ? 28 : -28);
-        } else {
-          const isBottom = marker.y >= parentCenter.y;
-          childY = marker.y + (isBottom ? 28 : -28);
-        }
-      } else {
-        childY = marker.y + 28;
-      }
-
-      const dx = childX - marker.x;
-      const dy = childY - marker.y;
-      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-      const stopX = marker.x + dx * (dist - ATTR_RADIUS) / dist;
-      const stopY = marker.y + dy * (dist - ATTR_RADIUS) / dist;
+      const { childX, childY } = compositeChildPos(node);
+      const cdx = childX - marker.x;
+      const cdy = childY - marker.y;
+      const dist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
+      const stopX = marker.x + cdx * (dist - ATTR_RADIUS) / dist;
+      const stopY = marker.y + cdy * (dist - ATTR_RADIUS) / dist;
 
       g.appendChild(svg("line", { class: "node-shape", x1: marker.x, y1: marker.y, x2: stopX, y2: stopY, stroke: "#111827", "stroke-width": 2 }));
       g.appendChild(svg("circle", { class: "node-shape", cx: marker.x, cy: marker.y, r: ATTR_RADIUS, fill: "#000", stroke: "#111827", "stroke-width": 2 }));
@@ -405,35 +405,27 @@ function labelForNode(node) {
     const marker = attributeMarker(node);
     const parent = attributeParent(node);
     const parentCenter = parent ? center(parent) : null;
-    const sidePlacement = parentCenter && Math.abs(marker.x - parentCenter.x) > Math.abs(marker.y - parentCenter.y) * 1.2;
-    
-    let childX = marker.x;
-    let childY = marker.y;
-    let isRight = true;
-    let isBottom = true;
+    const dx = parentCenter ? marker.x - parentCenter.x : 0;
+    const dy = parentCenter ? marker.y - parentCenter.y : 1;
+    const horizontal = parentCenter ? Math.abs(dx) >= Math.abs(dy) : false;
+
+    let labelAnchorX = marker.x;
+    let labelAnchorY = marker.y;
 
     if (node.props?.composite) {
-      if (parentCenter) {
-        if (sidePlacement) {
-          isRight = marker.x >= parentCenter.x;
-          childX = marker.x + (isRight ? 28 : -28);
-        } else {
-          isBottom = marker.y >= parentCenter.y;
-          childY = marker.y + (isBottom ? 28 : -28);
-        }
-      } else {
-        childY = marker.y + 28;
-      }
+      const { childX, childY } = compositeChildPos(node);
+      labelAnchorX = childX;
+      labelAnchorY = childY;
     }
 
-    if (sidePlacement) {
-      isRight = marker.x >= parentCenter.x;
-      const x = childX + (isRight ? ATTR_RADIUS + 8 : -ATTR_RADIUS - 8);
-      g.appendChild(labelEl(node.label, x, childY, { maxChars: 16, anchor: isRight ? "start" : "end" }));
+    if (horizontal) {
+      const isRight = dx >= 0;
+      const x = labelAnchorX + (isRight ? ATTR_RADIUS + 8 : -ATTR_RADIUS - 8);
+      g.appendChild(labelEl(node.label, x, labelAnchorY, { maxChars: 16, anchor: isRight ? "start" : "end" }));
     } else {
-      isBottom = parentCenter ? marker.y >= parentCenter.y : true;
-      const labelY = childY + (isBottom ? 32 : -32);
-      g.appendChild(labelEl(node.label, childX, labelY, { maxChars: 14 }));
+      const isBottom = parentCenter ? dy >= 0 : true;
+      const labelY = labelAnchorY + (isBottom ? 32 : -32);
+      g.appendChild(labelEl(node.label, labelAnchorX, labelY, { maxChars: 14 }));
     }
     return g;
   }
