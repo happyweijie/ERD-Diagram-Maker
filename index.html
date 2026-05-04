@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ERD Diagram Drawer</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="mark">ER</div>
+          <div>
+            <input id="project-title" class="title-input" value="Untitled ERD" aria-label="Diagram title" />
+            <div class="save-status">
+              <span id="save-dot"></span>
+              <span id="save-text">Saved locally</span>
+              <span id="last-saved"></span>
+            </div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button id="undo-btn" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+          <button id="redo-btn" title="Redo (Ctrl+Y)" aria-label="Redo">↷</button>
+          <button id="fit-btn" title="Fit diagram" aria-label="Fit diagram">Fit</button>
+          <button id="png-btn" title="Download PNG" aria-label="Download PNG">PNG</button>
+          <button id="clear-btn" class="danger" title="Clear canvas" aria-label="Clear canvas">Clear</button>
+        </div>
+      </header>
+
+      <main class="shell">
+        <aside class="toolbar" aria-label="Drawing tools">
+          <button data-tool="select" class="tool active" title="Select / move (V)">Select</button>
+          <button data-tool="entity" class="tool" title="Add Entity (E)">Entity</button>
+          <button data-tool="weakEntity" class="tool" title="Add Weak Entity (W)">Weak Entity</button>
+          <button data-tool="relationship" class="tool" title="Add Relationship (R)">Relationship</button>
+          <button data-tool="attribute" class="tool" title="Add Attribute (A)">Attribute</button>
+          <button data-tool="derivedAttribute" class="tool" title="Add Derived Attribute (D)">Derived Attr</button>
+          <button data-tool="keyAttribute" class="tool" title="Add Key Attribute (K)">Key Attr</button>
+          <button data-tool="aggregate" class="tool" title="Add Aggregate (G)">Aggregate</button>
+          <button data-tool="note" class="tool" title="Add Note/Text (N)">Note</button>
+          <button data-tool="connector" class="tool" title="Connector tool (C)">Connector</button>
+          <div class="toolbar-rule"></div>
+          <label class="toggle"><input id="grid-toggle" type="checkbox" checked /> Grid</label>
+          <label class="toggle"><input id="snap-toggle" type="checkbox" checked /> Snap</label>
+        </aside>
+
+        <section class="canvas-wrap">
+          <div id="empty-state" class="empty-state">
+            <strong>Start with an entity or relationship.</strong>
+            <span>Use the toolbar, drag items around, then connect them with the Connector tool.</span>
+          </div>
+          <svg id="canvas" role="application" aria-label="ERD canvas" tabindex="0">
+            <defs>
+              <pattern id="grid-pattern" width="24" height="24" patternUnits="userSpaceOnUse">
+                <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#d9e2ef" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect id="grid-bg" x="-5000" y="-5000" width="10000" height="10000" fill="url(#grid-pattern)" />
+            <g id="viewport">
+              <g id="edges-layer"></g>
+              <g id="nodes-layer"></g>
+              <g id="ui-layer"></g>
+            </g>
+          </svg>
+        </section>
+
+        <aside class="properties" aria-label="Properties panel">
+          <div class="panel-head">
+            <h2>Properties</h2>
+            <span id="selection-kind">Nothing selected</span>
+          </div>
+          <div id="properties-body" class="properties-body">
+            <p class="hint">Select a diagram item to edit its name, notation, cardinality, participation, and notes.</p>
+          </div>
+          <div class="shortcuts">
+            <h3>Shortcuts</h3>
+            <p><kbd>V</kbd> select <kbd>C</kbd> connector <kbd>Del</kbd> delete</p>
+            <p><kbd>Ctrl</kbd> + wheel zoom, drag blank canvas to pan</p>
+            <p><kbd>Ctrl+Z</kbd> undo <kbd>Ctrl+Y</kbd> redo</p>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <div id="context-menu" class="context-menu" hidden>
+      <button data-action="duplicate">Duplicate</button>
+      <button data-action="edit">Edit properties</button>
+      <button data-action="convert">Convert weak/regular</button>
+      <button data-action="delete" class="danger-text">Delete</button>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
