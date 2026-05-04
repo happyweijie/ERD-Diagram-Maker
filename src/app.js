@@ -279,7 +279,9 @@ function render() {
   renderEdges();
   renderNodes();
   renderSelectionUi();
-  renderProperties();
+  const activeEl = document.activeElement;
+  const isEditingProperty = activeEl && propertiesBody.contains(activeEl) && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+  if (!isEditingProperty) renderProperties();
 }
 
 function svg(tag, attrs = {}, children = []) {
