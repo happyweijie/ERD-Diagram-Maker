@@ -630,8 +630,8 @@ function renderEdges() {
       group.appendChild(svg("line", { class: "edge-line", x1: ep.a.x, y1: ep.a.y, x2: ep.b.x, y2: ep.b.y, stroke: edgeSelected === edge.id ? "#2563eb" : "#111827", "stroke-width": strokeWidth, "stroke-dasharray": dashed ? "7 5" : "" }));
     }
     // Filled dots at identifying relationship connection points (strong entity side only)
-    const DOT_R = 6;
-    const DOT_OFFSET = 14;
+    const DOT_R = ATTR_RADIUS;
+    const DOT_OFFSET = 28;
     const isStrongEntity = (n) => n.type === "entity" && !n.props?.weak;
     if (ep.from.type === "relationship" && ep.from.props?.identifying && !ep.self && isStrongEntity(ep.to)) {
       const dx = ep.b.x - ep.a.x;
