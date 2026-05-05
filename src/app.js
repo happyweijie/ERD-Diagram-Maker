@@ -589,18 +589,25 @@ function renderEdges() {
 }
 
 function renderCompositeBars() {
-  const byParent = new Map();
+  // Group composite attributes by (parentId, compositeGroup)
+  const byGroup = new Map();
   state.edges.forEach((edge) => {
     const from = nodeById(edge.from);
     const to = nodeById(edge.to);
     const attr = from?.type === "attribute" ? from : to?.type === "attribute" ? to : null;
     const parent = attr?.id === from?.id ? to : from;
     if (!attr?.props?.composite || !parent) return;
-    const key = parent.id;
-    if (!byParent.has(key)) byParent.set(key, []);
-    byParent.get(key).push(attr);
+    // Parse comma-separated group numbers (default "1")
+    const groupStr = String(attr.props.compositeGroup || "1");
+    const groups = groupStr.split(",").map(s => s.trim()).filter(Boolean);
+    for (const g of groups) {
+      const key = `${parent.id}:${g}`;
+      if (!byGroup.has(key)) byGroup.set(key, []);
+      byGroup.get(key).push(attr);
+    }
   });
-  byParent.forEach((attrs) => {
+  byGroup.forEach((attrs) => {
+    if (attrs.length < 2) return;
     const markers = attrs.map(attributeMarker);
     const minX = Math.min(...markers.map((marker) => marker.x));
     const maxX = Math.max(...markers.map((marker) => marker.x));
@@ -710,7 +717,8 @@ function renderProperties() {
     ? `<label class="check-row"><input id="prop-key" type="checkbox" ${node.props?.key ? "checked" : ""}> Key attribute</label>
        <label class="check-row"><input id="prop-derived" type="checkbox" ${node.props?.derived ? "checked" : ""}> Derived attribute</label>
        <label class="check-row"><input id="prop-partial" type="checkbox" ${node.props?.partial ? "checked" : ""}> Partial key / weak marker</label>
-       <label class="check-row"><input id="prop-composite" type="checkbox" ${node.props?.composite ? "checked" : ""}> Composite attribute marker</label>`
+       <label class="check-row"><input id="prop-composite" type="checkbox" ${node.props?.composite ? "checked" : ""}> Composite attribute marker</label>
+       ${node.props?.composite ? `<div class="field"><label for="prop-composite-group">Composite group(s)</label><input id="prop-composite-group" placeholder="e.g. 1 or 1,2" value="${esc(node.props?.compositeGroup || "1")}"></div>` : ""}`
     : "";
   const entityControls = ["entity", "weakEntity"].includes(node.type)
     ? `<label class="check-row"><input id="prop-weak" type="checkbox" ${(node.type === "weakEntity" || node.props?.weak) ? "checked" : ""}> Weak entity</label>`
@@ -744,6 +752,7 @@ function bindNodeProperties(node) {
   document.querySelector("#prop-notes").addEventListener("input", (e) => update((n) => (n.notes = e.target.value)));
   document.querySelector("#prop-weak")?.addEventListener("change", (e) => update((n) => { n.props = { ...n.props, weak: e.target.checked }; n.type = e.target.checked ? "weakEntity" : "entity"; }));
   document.querySelector("#prop-identifying")?.addEventListener("change", (e) => update((n) => { n.props = { ...n.props, identifying: e.target.checked }; }));
+  document.querySelector("#prop-composite-group")?.addEventListener("input", (e) => update((n) => { n.props = { ...n.props, compositeGroup: e.target.value }; }));
   ["key", "derived", "partial", "composite"].forEach((key) => {
     document.querySelector(`#prop-${key}`)?.addEventListener("change", (e) => update((n) => { n.props = { ...n.props, [key]: e.target.checked }; }));
   });
