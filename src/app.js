@@ -152,6 +152,62 @@ function compositeChildPos(node) {
   return { childX, childY, horizontal, dx, dy };
 }
 
+function computeGroupLevels(parentId) {
+  const attrGroups = [];
+  const groups = new Set();
+  state.edges.forEach((edge) => {
+    const from = nodeById(edge.from);
+    const to = nodeById(edge.to);
+    const attr = from?.type === "attribute" ? from : to?.type === "attribute" ? to : null;
+    const parent = attr?.id === from?.id ? to : from;
+    if (!attr?.props?.composite || parent?.id !== parentId) return;
+    const myGroups = String(attr.props.compositeGroup || "1").split(",").map(s => s.trim()).filter(Boolean);
+    if (myGroups.length > 0) {
+      attrGroups.push(myGroups);
+      myGroups.forEach(g => groups.add(g));
+    }
+  });
+
+  const groupList = [...groups].sort();
+  const adj = {};
+  groupList.forEach(g => adj[g] = new Set());
+  attrGroups.forEach(myGroups => {
+    for (let i = 0; i < myGroups.length; i++) {
+      for (let j = i + 1; j < myGroups.length; j++) {
+        adj[myGroups[i]].add(myGroups[j]);
+        adj[myGroups[j]].add(myGroups[i]);
+      }
+    }
+  });
+
+  const levels = {};
+  let maxLevel = 0;
+  groupList.forEach(g => {
+    const usedLevels = new Set([...adj[g]].map(neighbor => levels[neighbor]));
+    let l = 0;
+    while (usedLevels.has(l)) l++;
+    levels[g] = l;
+    if (l > maxLevel) maxLevel = l;
+  });
+
+  return { levels, totalLevels: maxLevel + 1 };
+}
+
+function compositeGroupDotPos(node, groupIndex, totalGroups) {
+  const marker = attributeMarker(node);
+  if (totalGroups <= 1) return marker;
+  const { horizontal, dx, dy } = compositeChildPos(node);
+  const spacing = ATTR_RADIUS * 2 + 10;
+  // Offset toward the entity (opposite of child direction) so dots stack between entity and child
+  if (horizontal) {
+    const dir = dx >= 0 ? -1 : 1;
+    return { x: marker.x + dir * groupIndex * spacing, y: marker.y };
+  } else {
+    const dir = dy >= 0 ? -1 : 1;
+    return { x: marker.x, y: marker.y + dir * groupIndex * spacing };
+  }
+}
+
 function nodeById(id) {
   return state.nodes.find((n) => n.id === id);
 }
@@ -366,15 +422,38 @@ function shapeForNode(node) {
     const g = svg("g");
     const marker = attributeMarker(node);
     if (node.props?.composite || node.props?.partial) {
-      const { childX, childY } = compositeChildPos(node);
-      const cdx = childX - marker.x;
-      const cdy = childY - marker.y;
-      const dist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
-      const stopX = marker.x + cdx * (dist - ATTR_RADIUS) / dist;
-      const stopY = marker.y + cdy * (dist - ATTR_RADIUS) / dist;
+      const { childX, childY, horizontal, dx, dy } = compositeChildPos(node);
+      const parent = attributeParent(node);
 
-      g.appendChild(svg("line", { class: "node-shape", x1: marker.x, y1: marker.y, x2: stopX, y2: stopY, stroke: "#111827", "stroke-width": 2 }));
-      g.appendChild(svg("circle", { class: "node-shape", cx: marker.x, cy: marker.y, r: ATTR_RADIUS, fill: "#000", stroke: "#111827", "stroke-width": 2 }));
+      // Determine number of filled dots (one per composite group)
+      let dotPositions = [attributeMarker(node)];
+      if (node.props?.composite && parent) {
+        const { levels, totalLevels } = computeGroupLevels(parent.id);
+        const myGroups = String(node.props.compositeGroup || "1").split(",").map(s => s.trim()).filter(Boolean);
+        dotPositions = myGroups.map(gName => {
+          const l = levels[gName] ?? 0;
+          return compositeGroupDotPos(node, l, totalLevels);
+        });
+      }
+
+      // Draw line from farthest filled dot to clear dot
+      const farthest = dotPositions.reduce((best, p) => {
+        const d = Math.sqrt((p.x - childX) ** 2 + (p.y - childY) ** 2);
+        return d > best.d ? { p, d } : best;
+      }, { p: dotPositions[0], d: 0 }).p;
+      const cdx = childX - farthest.x;
+      const cdy = childY - farthest.y;
+      const dist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
+      const stopX = farthest.x + cdx * (dist - ATTR_RADIUS) / dist;
+      const stopY = farthest.y + cdy * (dist - ATTR_RADIUS) / dist;
+      g.appendChild(svg("line", { class: "node-shape", x1: farthest.x, y1: farthest.y, x2: stopX, y2: stopY, stroke: "#111827", "stroke-width": 2 }));
+
+      // Draw filled dots
+      for (const dp of dotPositions) {
+        g.appendChild(svg("circle", { class: "node-shape", cx: dp.x, cy: dp.y, r: ATTR_RADIUS, fill: "#000", stroke: "#111827", "stroke-width": 2 }));
+      }
+
+      // Draw clear dot at child
       g.appendChild(svg("circle", { class: "node-shape", cx: childX, cy: childY, r: ATTR_RADIUS, fill: "#fff", stroke: "#111827", "stroke-width": 2 }));
       return g;
     }
@@ -606,9 +685,14 @@ function renderCompositeBars() {
       byGroup.get(key).push(attr);
     }
   });
-  byGroup.forEach((attrs) => {
+  byGroup.forEach((attrs, key) => {
     if (attrs.length < 2) return;
-    const markers = attrs.map(attributeMarker);
+    // Extract group name from key "parentId:groupName"
+    const groupName = key.split(":").slice(1).join(":");
+    const firstParent = attributeParent(attrs[0]);
+    const { levels, totalLevels } = firstParent ? computeGroupLevels(firstParent.id) : { levels: { [groupName]: 0 }, totalLevels: 1 };
+    const level = levels[groupName] ?? 0;
+    const markers = attrs.map(attr => compositeGroupDotPos(attr, level, totalLevels));
     const minX = Math.min(...markers.map((marker) => marker.x));
     const maxX = Math.max(...markers.map((marker) => marker.x));
     const minY = Math.min(...markers.map((marker) => marker.y));
@@ -750,11 +834,17 @@ function bindNodeProperties(node) {
   document.querySelector("#prop-width").addEventListener("change", (e) => update((n) => (n.width = clamp(Number(e.target.value) || n.width, 48, 800))));
   document.querySelector("#prop-height").addEventListener("change", (e) => update((n) => (n.height = clamp(Number(e.target.value) || n.height, 36, 600))));
   document.querySelector("#prop-notes").addEventListener("input", (e) => update((n) => (n.notes = e.target.value)));
-  document.querySelector("#prop-weak")?.addEventListener("change", (e) => update((n) => { n.props = { ...n.props, weak: e.target.checked }; n.type = e.target.checked ? "weakEntity" : "entity"; }));
+  document.querySelector("#prop-weak")?.addEventListener("change", (e) => {
+    update((n) => { n.props = { ...n.props, weak: e.target.checked }; n.type = e.target.checked ? "weakEntity" : "entity"; });
+    renderProperties();
+  });
   document.querySelector("#prop-identifying")?.addEventListener("change", (e) => update((n) => { n.props = { ...n.props, identifying: e.target.checked }; }));
   document.querySelector("#prop-composite-group")?.addEventListener("input", (e) => update((n) => { n.props = { ...n.props, compositeGroup: e.target.value }; }));
   ["key", "derived", "partial", "composite"].forEach((key) => {
-    document.querySelector(`#prop-${key}`)?.addEventListener("change", (e) => update((n) => { n.props = { ...n.props, [key]: e.target.checked }; }));
+    document.querySelector(`#prop-${key}`)?.addEventListener("change", (e) => {
+      update((n) => { n.props = { ...n.props, [key]: e.target.checked }; });
+      if (key === "composite") renderProperties();
+    });
   });
   document.querySelector("#add-child-attr").addEventListener("click", () => {
     const parent = nodeById(node.id);
