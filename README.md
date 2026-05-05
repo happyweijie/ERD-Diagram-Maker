@@ -1,6 +1,40 @@
 # ERD Diagram Drawer
 
-A lightweight browser-based ERD editor for Chen-style entity-relationship diagrams. It uses SVG for crisp shapes and local browser storage for persistence.
+![ERD Diagram Drawer](assets/images/Ui.png)
+
+A lightweight browser-based ERD editor for [CS2102](https://nusmods.com/courses/cs2102)-style entity-relationship diagrams. It uses SVG for crisp shapes and local browser storage for persistence.
+
+## Features
+- Create and edit entities, weak entities, attributes, and relationships.
+- Support for composite keys and overlapping composite keys.
+- Support for partial and identifying relationships as well as aggregations.
+- Export to PNG.
+
+## Advanced Features
+
+### Composite Keys
+![Composite Keys](assets/images/compositeKey.png)
+
+1. Create an entity and add some attributes.
+2. Select some attributes and tick `Composite attribute marker` on the right sidebar.
+3. Use the `Composite group(s)` field on the right sidebar to specify which group the attribute belongs to. For example, if you want to create a composite key with three attributes, you can assign them to the same `group id`, for example, `1`.
+4. Repeat steps 2-3 for other attributes that should be part of the same composite key. Note that these attributes should share the same `group id`.
+
+**Notes**:
+![Multiple Composite Keys](assets/images/multipleCompositeKeys.png)
+- Multiple composite keys can be created by assigning different `group ids` to different composite attributes. 
+
+![Overlapping Composite Keys](assets/images/overlappingCompositeKeys.png)
+- Overlapping composite keys can be created by assigning multiple `group ids` to the `Composite group(s)` field using a comma separated list. For example, `1,2`.
+
+### Partial Keys
+![Partial Keys](assets/images/partialKey.png)
+
+1. Create a Weak Entity
+2. Add a key attribute to the Weak Entity and tick `Partial key / weak marker` on the right sidebar.
+3. Add another entity (entity that the weak entity is related to).
+4. Add a relationship connecting the weak entity and the other entity. 
+5. Select the relationship and tick `Identifying (dot markers)` on the right sidebar.
 
 ## Run
 
@@ -14,36 +48,8 @@ Then open:
 http://localhost:4173
 ```
 
-## Use
-
-- Pick a tool from the left toolbar, then click the canvas to create items.
-- Use **Connector** to click one item, then another item, creating entity-relationship or attribute connectors.
-- Select an item to edit its name, weak/entity status, attribute type, relationship cardinality, participation, role name, and notes.
-- Drag nodes to move them. Use the blue handle to resize selected nodes.
-- Hold `Ctrl` and scroll to zoom. Drag blank canvas space to pan.
-- Use `Delete`, `Ctrl+Z`, and `Ctrl+Y` for delete, undo, and redo.
-- Toggle grid and snap from the toolbar.
-- Use **PNG** to export a high-resolution image of the whole diagram.
-- Use **Clear** to reset the canvas after confirmation.
-
 ## Persistence
 
-The app auto-saves every meaningful change to `localStorage` using a versioned project JSON schema:
-
-```json
-{
-  "metadata": {
-    "title": "Untitled ERD",
-    "description": "",
-    "createdAt": "...",
-    "updatedAt": "...",
-    "version": 1
-  },
-  "viewport": { "zoom": 1, "pan": { "x": 160, "y": 90 } },
-  "settings": { "grid": true, "snap": true, "theme": "light" },
-  "nodes": [],
-  "edges": []
-}
-```
+The app auto-saves every meaningful change to `localStorage` using a versioned project JSON schema. 
 
 Reloading the page restores the last diagram in the same browser.
