@@ -118,7 +118,7 @@ function center(node) {
 function attributeMarker(node) {
   return {
     x: node.x + node.width / 2,
-    y: node.y + (node.props?.composite ? 18 : 16),
+    y: node.y + ((node.props?.composite || node.props?.partial) ? 18 : 16),
   };
 }
 
@@ -345,7 +345,7 @@ function shapeForNode(node) {
       points: `${node.x + node.width / 2},${node.y} ${node.x + node.width},${node.y + node.height / 2} ${node.x + node.width / 2},${node.y + node.height} ${node.x},${node.y + node.height / 2}`,
       fill: "#fff",
       stroke: "#111827",
-      "stroke-width": node.props?.identifying ? 3 : 2,
+      "stroke-width": 2,
     });
   }
   if (node.type === "aggregate") {
@@ -365,7 +365,7 @@ function shapeForNode(node) {
   if (node.type === "attribute") {
     const g = svg("g");
     const marker = attributeMarker(node);
-    if (node.props?.composite) {
+    if (node.props?.composite || node.props?.partial) {
       const { childX, childY } = compositeChildPos(node);
       const cdx = childX - marker.x;
       const cdy = childY - marker.y;
@@ -375,7 +375,7 @@ function shapeForNode(node) {
 
       g.appendChild(svg("line", { class: "node-shape", x1: marker.x, y1: marker.y, x2: stopX, y2: stopY, stroke: "#111827", "stroke-width": 2 }));
       g.appendChild(svg("circle", { class: "node-shape", cx: marker.x, cy: marker.y, r: ATTR_RADIUS, fill: "#000", stroke: "#111827", "stroke-width": 2 }));
-      g.appendChild(svg("circle", { class: "node-shape", cx: childX, cy: childY, r: ATTR_RADIUS, fill: "#fff", stroke: "#111827", "stroke-width": node.props?.partial ? 2.8 : 2, "stroke-dasharray": node.props?.partial ? "3 3" : "" }));
+      g.appendChild(svg("circle", { class: "node-shape", cx: childX, cy: childY, r: ATTR_RADIUS, fill: "#fff", stroke: "#111827", "stroke-width": 2 }));
       return g;
     }
     g.appendChild(svg("circle", {
@@ -385,20 +385,14 @@ function shapeForNode(node) {
       r: ATTR_RADIUS,
       fill: node.props?.key ? "#000" : "#fff",
       stroke: "#111827",
-      "stroke-width": node.props?.partial ? 2.8 : 2,
-      "stroke-dasharray": node.props?.partial ? "3 3" : "",
+      "stroke-width": 2,
     }));
     return g;
   }
   if (node.type === "note") {
     return svg("rect", { class: "node-shape", x: node.x, y: node.y, width: node.width, height: node.height, fill: "#fffceb", stroke: "#d6b94c", "stroke-width": 1.5, rx: 6 });
   }
-  const g = svg("g");
-  g.appendChild(svg("rect", { class: "node-shape", x: node.x, y: node.y, width: node.width, height: node.height, fill: "#fff", stroke: "#111827", "stroke-width": 2 }));
-  if (node.type === "weakEntity" || node.props?.weak) {
-    g.appendChild(svg("rect", { class: "node-shape", x: node.x + 6, y: node.y + 6, width: node.width - 12, height: node.height - 12, fill: "none", stroke: "#111827", "stroke-width": 1.5 }));
-  }
-  return g;
+  return svg("rect", { class: "node-shape", x: node.x, y: node.y, width: node.width, height: node.height, fill: "#fff", stroke: "#111827", "stroke-width": 2 });
 }
 
 function labelForNode(node) {
@@ -414,7 +408,7 @@ function labelForNode(node) {
     let labelAnchorX = marker.x;
     let labelAnchorY = marker.y;
 
-    if (node.props?.composite) {
+    if (node.props?.composite || node.props?.partial) {
       const { childX, childY } = compositeChildPos(node);
       labelAnchorX = childX;
       labelAnchorY = childY;
@@ -535,6 +529,7 @@ function perimeterPoint(node, toward) {
 function renderEdges() {
   edgesLayer.replaceChildren();
   renderCompositeBars();
+  const identifyingDots = new Map(); // relId -> [{x, y}]
   state.edges.forEach((edge) => {
     const ep = edgeEndpoints(edge);
     if (!ep) return;
@@ -548,6 +543,30 @@ function renderEdges() {
     } else {
       group.appendChild(svg("line", { class: "edge-line", x1: ep.a.x, y1: ep.a.y, x2: ep.b.x, y2: ep.b.y, stroke: edgeSelected === edge.id ? "#2563eb" : "#111827", "stroke-width": strokeWidth, "stroke-dasharray": dashed ? "7 5" : "" }));
     }
+    // Filled dots at identifying relationship connection points (strong entity side only)
+    const DOT_R = 6;
+    const DOT_OFFSET = 14;
+    const isStrongEntity = (n) => n.type === "entity" && !n.props?.weak;
+    if (ep.from.type === "relationship" && ep.from.props?.identifying && !ep.self && isStrongEntity(ep.to)) {
+      const dx = ep.b.x - ep.a.x;
+      const dy = ep.b.y - ep.a.y;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const dotX = ep.a.x + (dx / len) * DOT_OFFSET;
+      const dotY = ep.a.y + (dy / len) * DOT_OFFSET;
+      group.appendChild(svg("circle", { cx: dotX, cy: dotY, r: DOT_R, fill: "#111827" }));
+      if (!identifyingDots.has(ep.from.id)) identifyingDots.set(ep.from.id, []);
+      identifyingDots.get(ep.from.id).push({ x: dotX, y: dotY });
+    }
+    if (ep.to.type === "relationship" && ep.to.props?.identifying && !ep.self && isStrongEntity(ep.from)) {
+      const dx = ep.a.x - ep.b.x;
+      const dy = ep.a.y - ep.b.y;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const dotX = ep.b.x + (dx / len) * DOT_OFFSET;
+      const dotY = ep.b.y + (dy / len) * DOT_OFFSET;
+      group.appendChild(svg("circle", { cx: dotX, cy: dotY, r: DOT_R, fill: "#111827" }));
+      if (!identifyingDots.has(ep.to.id)) identifyingDots.set(ep.to.id, []);
+      identifyingDots.get(ep.to.id).push({ x: dotX, y: dotY });
+    }
     const mid = ep.self
       ? { x: ep.a.x + 82, y: (ep.a.y + ep.b.y) / 2 }
       : { x: ep.a.x + (ep.b.x - ep.a.x) * (edge.labelPosition || 0.5), y: ep.a.y + (ep.b.y - ep.a.y) * (edge.labelPosition || 0.5) };
@@ -558,6 +577,8 @@ function renderEdges() {
     }
     edgesLayer.appendChild(group);
   });
+  // Draw connecting lines from identifying dots to partial key dots
+  renderIdentifyingBars(identifyingDots);
 }
 
 function renderCompositeBars() {
@@ -594,6 +615,55 @@ function renderCompositeBars() {
         stroke: "#111827",
         "stroke-width": 2,
       }));
+    }
+  });
+}
+
+function renderIdentifyingBars(identifyingDots) {
+  // For each identifying relationship, connect the strong-entity dot
+  // to the partial key attribute's filled dot on the weak entity
+  identifyingDots.forEach((dots, relId) => {
+    const rel = nodeById(relId);
+    if (!rel) return;
+
+    // Find partial key markers on weak entities connected to this relationship
+    const partialKeyMarkers = [];
+    for (const edge of state.edges) {
+      const fromNode = nodeById(edge.from);
+      const toNode = nodeById(edge.to);
+      if (!fromNode || !toNode) continue;
+      const isRelFrom = fromNode.id === relId;
+      const isRelTo = toNode.id === relId;
+      if (!isRelFrom && !isRelTo) continue;
+      const other = isRelFrom ? toNode : fromNode;
+      if (other.type !== "weakEntity") continue;
+      for (const attrEdge of state.edges) {
+        const af = nodeById(attrEdge.from);
+        const at = nodeById(attrEdge.to);
+        const attr = af?.type === "attribute" ? af : at?.type === "attribute" ? at : null;
+        const parent = attr?.id === af?.id ? at : af;
+        if (attr?.props?.partial && parent?.id === other.id) {
+          partialKeyMarkers.push(attributeMarker(attr));
+        }
+      }
+    }
+
+    if (!partialKeyMarkers.length) return;
+
+    for (const dot of dots) {
+      for (const pk of partialKeyMarkers) {
+        // Clean L-shape: go horizontal from dot to pk.x, then vertical to pk.y
+        // This routes the line away from the diamond since the partial key
+        // is always offset from the diamond's center axis
+        edgesLayer.appendChild(svg("polyline", {
+          class: "edge-line",
+          points: `${dot.x},${dot.y} ${pk.x},${dot.y} ${pk.x},${pk.y}`,
+          fill: "none",
+          stroke: "#111827",
+          "stroke-width": 2,
+          "stroke-linejoin": "miter",
+        }));
+      }
     }
   });
 }
@@ -636,10 +706,10 @@ function renderProperties() {
        <label class="check-row"><input id="prop-composite" type="checkbox" ${node.props?.composite ? "checked" : ""}> Composite attribute marker</label>`
     : "";
   const entityControls = ["entity", "weakEntity"].includes(node.type)
-    ? `<label class="check-row"><input id="prop-weak" type="checkbox" ${(node.type === "weakEntity" || node.props?.weak) ? "checked" : ""}> Weak entity double border</label>`
+    ? `<label class="check-row"><input id="prop-weak" type="checkbox" ${(node.type === "weakEntity" || node.props?.weak) ? "checked" : ""}> Weak entity</label>`
     : "";
   const relationshipControls = ["relationship", "aggregate"].includes(node.type)
-    ? `<label class="check-row"><input id="prop-identifying" type="checkbox" ${node.props?.identifying ? "checked" : ""}> Identifying relationship</label>`
+    ? `<label class="check-row"><input id="prop-identifying" type="checkbox" ${node.props?.identifying ? "checked" : ""}> Identifying (dot markers)</label>`
     : "";
   propertiesBody.innerHTML = `
     <div class="field"><label for="prop-label">Name</label><input id="prop-label" value="${esc(node.label)}"></div>
