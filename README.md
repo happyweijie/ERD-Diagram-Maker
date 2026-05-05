@@ -21,6 +21,7 @@ A lightweight browser-based ERD editor for [CS2102](https://nusmods.com/courses/
 4. Repeat steps 2-3 for other attributes that should be part of the same composite key. Note that these attributes should share the same `group id`.
 
 **Notes**:
+
 ![Multiple Composite Keys](assets/images/multipleCompositeKeys.png)
 - Multiple composite keys can be created by assigning different `group ids` to different composite attributes. 
 
@@ -28,6 +29,7 @@ A lightweight browser-based ERD editor for [CS2102](https://nusmods.com/courses/
 - Overlapping composite keys can be created by assigning multiple `group ids` to the `Composite group(s)` field using a comma separated list. For example, `1,2`.
 
 ### Partial Keys
+
 ![Partial Keys](assets/images/partialKey.png)
 
 1. Create a Weak Entity
