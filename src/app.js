@@ -750,12 +750,19 @@ function renderIdentifyingBars(identifyingDots) {
 
     for (const dot of dots) {
       for (const pk of partialKeyMarkers) {
-        // Clean L-shape: go horizontal from dot to pk.x, then vertical to pk.y
-        // This routes the line away from the diamond since the partial key
-        // is always offset from the diamond's center axis
+        const cx = rel.x + rel.width / 2;
+        const cy = rel.y + rel.height / 2;
+        const isDotHorizontal = Math.abs(dot.x - cx) / (rel.width / 2) > Math.abs(dot.y - cy) / (rel.height / 2);
+
+        // If dot is on the sides, go vertical then horizontal to avoid crossing the diamond.
+        // If dot is top/bottom, go horizontal then vertical.
+        const points = isDotHorizontal 
+          ? `${dot.x},${dot.y} ${dot.x},${pk.y} ${pk.x},${pk.y}`
+          : `${dot.x},${dot.y} ${pk.x},${dot.y} ${pk.x},${pk.y}`;
+
         edgesLayer.appendChild(svg("polyline", {
           class: "edge-line",
-          points: `${dot.x},${dot.y} ${pk.x},${dot.y} ${pk.x},${pk.y}`,
+          points,
           fill: "none",
           stroke: "#111827",
           "stroke-width": 2,
