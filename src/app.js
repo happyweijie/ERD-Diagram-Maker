@@ -929,6 +929,7 @@ async function exportPng() {
   const clone = canvas.cloneNode(true);
   clone.querySelector("#ui-layer")?.replaceChildren();
   clone.querySelector("#grid-bg")?.remove();
+  clone.querySelectorAll(".anchor").forEach((el) => el.remove());
   clone.setAttribute("width", String(box.width * 2));
   clone.setAttribute("height", String(box.height * 2));
   clone.setAttribute("viewBox", `${box.x} ${box.y} ${box.width} ${box.height}`);
