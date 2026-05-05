@@ -522,7 +522,14 @@ function perimeterPoint(node, toward) {
   const c = center(node);
   const dx = toward.x - c.x || 0.001;
   const dy = toward.y - c.y || 0.001;
-  const scale = Math.min((node.width / 2) / Math.abs(dx), (node.height / 2) / Math.abs(dy));
+  const hw = node.width / 2;
+  const hh = node.height / 2;
+  // Use diamond geometry for relationship shapes so edge lines touch the diamond
+  if (node.type === "relationship") {
+    const scale = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
+    return { x: c.x + dx * scale, y: c.y + dy * scale };
+  }
+  const scale = Math.min(hw / Math.abs(dx), hh / Math.abs(dy));
   return { x: c.x + dx * scale, y: c.y + dy * scale };
 }
 
