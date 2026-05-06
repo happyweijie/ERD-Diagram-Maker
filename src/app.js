@@ -268,11 +268,34 @@ function addNodeFromTool(type, point) {
   setTool("select");
 }
 
+function getDependentAttributes(baseIds) {
+  const ids = new Set(baseIds);
+  let added = true;
+  while (added) {
+    added = false;
+    state.edges.forEach((edge) => {
+      const fromNode = nodeById(edge.from);
+      const toNode = nodeById(edge.to);
+      if (!fromNode || !toNode) return;
+      if (ids.has(edge.from) && !ids.has(edge.to) && toNode.type === "attribute") {
+        ids.add(edge.to);
+        added = true;
+      }
+      if (ids.has(edge.to) && !ids.has(edge.from) && fromNode.type === "attribute") {
+        ids.add(edge.from);
+        added = true;
+      }
+    });
+  }
+  return ids;
+}
+
 function duplicateSelected() {
   if (!selected.size) return;
   commit(() => {
     const mapping = new Map();
-    const copies = [...selected].map((id) => {
+    const idsToDuplicate = getDependentAttributes(selected);
+    const copies = [...idsToDuplicate].map((id) => {
       const copy = structuredClone(nodeById(id));
       copy.id = uid("node");
       copy.x += 28;
@@ -285,7 +308,7 @@ function duplicateSelected() {
       .map((edge) => ({ ...structuredClone(edge), id: uid("edge"), from: mapping.get(edge.from), to: mapping.get(edge.to) }));
     state.nodes.push(...copies);
     state.edges.push(...edgeCopies);
-    selected = new Set(copies.map((n) => n.id));
+    selected = new Set([...selected].map((id) => mapping.get(id)).filter(Boolean));
     edgeSelected = null;
   });
 }
@@ -293,7 +316,7 @@ function duplicateSelected() {
 function deleteSelection() {
   if (!selected.size && !edgeSelected) return;
   commit(() => {
-    const ids = new Set(selected);
+    const ids = getDependentAttributes(selected);
     state.nodes = state.nodes.filter((node) => !ids.has(node.id));
     state.edges = state.edges.filter((edge) => !ids.has(edge.from) && !ids.has(edge.to) && edge.id !== edgeSelected);
     selected.clear();
@@ -937,7 +960,8 @@ function pointerDown(e) {
       render();
       return;
     }
-    drag = { mode: "move", start: p, originals: [...selected].map((sid) => structuredClone(nodeById(sid))) };
+    const moveIds = getDependentAttributes(selected);
+    drag = { mode: "move", start: p, originals: [...moveIds].map((sid) => structuredClone(nodeById(sid))) };
     pushHistory();
     return;
   }
