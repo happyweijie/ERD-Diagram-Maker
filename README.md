@@ -15,10 +15,10 @@ A lightweight browser-based ERD editor for [CS2102](https://nusmods.com/courses/
 ### Composite Keys
 ![Composite Keys](assets/images/compositeKey.png)
 
-1. Create an entity and add some attributes.
-2. Select some attributes and tick `Composite attribute marker` on the right sidebar.
-3. Use the `Composite group(s)` field on the right sidebar to specify which group the attribute belongs to. For example, if you want to create a composite key with three attributes, you can assign them to the same `group id`, for example, `1`.
-4. Repeat steps 2-3 for other attributes that should be part of the same composite key. Note that these attributes should share the same `group id`.
+1. Create an entity and add some key attributes.
+2. Select the key attributes and tick `Composite attribute marker` on the right sidebar.
+3. Use the `Composite group(s)` field on the right sidebar to specify which group the key attribute belongs to. For example, if you want to create a composite key with three attributes, you can assign them to the same `group id`, for example, `1`.
+4. Repeat steps 2-3 for other key attributes that should be part of the same composite key. Note that these attributes should share the same `group id`.
 
 **Notes**:
 
