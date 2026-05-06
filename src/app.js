@@ -1194,6 +1194,7 @@ document.addEventListener("keydown", (e) => {
   else if ((e.ctrlKey || e.metaKey) && ["y", "Z"].includes(e.key)) { e.preventDefault(); redo(); }
   else if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
   else if (e.key.toLowerCase() === "v") setTool("select");
+  else if (e.key.toLowerCase() === "s") setTool("select");
   else if (e.key.toLowerCase() === "c") setTool("connector");
   else if (e.key.toLowerCase() === "e") setTool("entity");
   else if (e.key.toLowerCase() === "w") setTool("weakEntity");
