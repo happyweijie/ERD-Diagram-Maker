@@ -4,10 +4,12 @@
 
 A lightweight browser-based ERD editor for [CS2102](https://nusmods.com/courses/cs2102)-style entity-relationship diagrams. It uses SVG for crisp shapes and local browser storage for persistence.
 
-## Features
-- Create and edit entities, weak entities, attributes, and relationships.
+## Basic Features
+- Create and edit entities, attributes, and relationships.
 - Support for composite keys and overlapping composite keys.
-- Support for partial and identifying relationships as well as aggregations.
+- Support for weak entities and identifying relationships.
+- Support for aggregations.
+- Persistence across browser sessions and automatic recovery.
 - Export to PNG.
 
 ## Advanced Features
