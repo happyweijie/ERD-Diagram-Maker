@@ -39,6 +39,7 @@ A lightweight browser-based ERD editor for [CS2102](https://nusmods.com/courses/
 3. Add another entity (entity that the weak entity is related to).
 4. Add a relationship connecting the weak entity and the other entity. 
 5. Select the relationship and tick `Identifying (dot markers)` on the right sidebar.
+6. If a L-shaped line is not automatically created, connect the partial key of the weak entity to the relationship. The L-shaped line will then be displayed.
 
 ## Run
 
