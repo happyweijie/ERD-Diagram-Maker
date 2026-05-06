@@ -522,7 +522,7 @@ function labelForNode(node) {
       g.appendChild(labelEl(node.label, x, labelAnchorY, { maxChars: 16, anchor: isRight ? "start" : "end" }));
     } else {
       const isBottom = parentCenter ? dy >= 0 : true;
-      const labelY = labelAnchorY + (isBottom ? 32 : -32);
+      const labelY = labelAnchorY + (isBottom ? 22 : -22);
       g.appendChild(labelEl(node.label, labelAnchorX, labelY, { maxChars: 14 }));
     }
     return g;
