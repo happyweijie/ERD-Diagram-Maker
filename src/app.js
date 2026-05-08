@@ -1207,7 +1207,11 @@ document.addEventListener("keydown", (e) => {
 });
 
 render();
-autosave();
+if (state.nodes.length > 0) {
+  setTimeout(() => fitToContent(), 0);
+} else {
+  autosave();
+}
 
 window.erdApp = {
   getState: () => structuredClone(state),
